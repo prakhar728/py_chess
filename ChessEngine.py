@@ -73,11 +73,8 @@ class GameState:
             self.board[move.startRow][move.endCol] = "--"  # capturing the pawn
 
         # castle move
-        print("Is castle move", move.isCastleMove)
         if move.isCastleMove:
-            print("Is castle move")
             if move.endCol - move.startCol == 2: # kingside castle move
-                print("Inside triggered")
                 self.board[move.endRow][move.endCol - 1] = self.board[move.endRow][move.endCol + 1] # moves the rook
                 self.board[move.endRow][move.endCol + 1] = "--" # moves the rook
             else: # queenside castle move
@@ -129,7 +126,6 @@ class GameState:
             # undo castle move
             if last_move.isCastleMove:
                 if last_move.endCol - last_move.startCol == 2:
-                    print("Inside move triggered")
                     self.board[last_move.endRow][last_move.endCol + 1] = self.board[last_move.endRow][last_move.endCol - 1]
                     self.board[last_move.endRow][last_move.endCol - 1] = "--"
                 else:
@@ -166,7 +162,6 @@ class GameState:
     '''
     def getValidMoves(self):
         moves = []
-        tempCastleRights = CastleRights(self.currentCastlingRight.wks, self.currentCastlingRight.bks, self.currentCastlingRight.wqs, self.currentCastlingRight.bqs)
 
         self.inCheck, self.pins, self.checks = self.checkForPinsAndChecks()
         if self.whiteToMove:
@@ -175,7 +170,7 @@ class GameState:
         else:
             kingRow, kingCol = self.blackKingLocation
             self.getCastleMoves(self.blackKingLocation[0], self.blackKingLocation[1], moves, 'b')
-
+        
         if self.inCheck:
             if len(self.checks) == 1:
                 moves = self.getAllPossibleMoves()
@@ -201,7 +196,11 @@ class GameState:
                 self.getKingMoves(kingRow, kingCol, moves)
         else:
             moves = self.getAllPossibleMoves()
-        self.currentCastlingRight = tempCastleRights
+
+        if self.whiteToMove:
+            self.getCastleMoves(self.whiteKingLocation[0], self.whiteKingLocation[1], moves, 'w')
+        else:
+            self.getCastleMoves(self.blackKingLocation[0], self.blackKingLocation[1], moves, 'b')
         return moves    
 
 
@@ -499,7 +498,6 @@ class GameState:
     def getKingSideCastleMoves(self, r, c, moves, allyColor):
         if self.board[r][c + 1] == "--" and self.board[r][c + 2] == "--":
             if not self.squareUnderAttack(r, c + 1) and not self.squareUnderAttack(r, c + 2):
-                print("King side castle moves true")
                 moves.append(Move((r, c), (r, c + 2), self.board, isCastleMove=True))
     
     def getQueenSideCastleMoves(self, r, c, moves, allyColor):
@@ -523,6 +521,7 @@ class Move:
                    "e": 4, "f": 5, "g": 6, "h": 7}
     colsToFiles = {v: k for k, v in filesToCols.items()}
 
+
     def __init__(self, startSq, endSq, board, isEnpassantMove=False, pawnPromotion=False, isCastleMove=False) -> None:  # Fix: corrected typo in isEnpassantMove
         self.startRow = startSq[0]
         self.startCol = startSq[1]
@@ -541,8 +540,6 @@ class Move:
             self.pieceCaptured = 'wp' if self.pieceMoved == 'bp' else 'bp'
         self.moveID = self.startRow * 1000 + self.startCol * 100 + self.endRow * 10 + self.endCol
         
-        if (isCastleMove):
-            print("This move is castleMove")
         self.isCastleMove = isCastleMove
 
 
@@ -559,3 +556,20 @@ class Move:
     
     def getRankFile(self, r, c):
         return self.colsToFiles[c] + self.rowsToRanks[r]
+
+    '''
+    Override string method
+    '''
+    def __str__(self):
+        move_string = f"Move {self.pieceMoved} from ({self.startRow}, {self.startCol}) to ({self.endRow}, {self.endCol})"
+        if self.isPawnPromotion:
+            move_string += ", with pawn promotion"
+        if self.isEnpassantMove:
+            move_string += ", capturing en passant"
+        if self.isCastleMove:
+            move_string += ", with castling"
+
+        if self.pieceCaptured != '--':
+            move_string += f", capturing {self.pieceCaptured}"
+
+        return move_string
